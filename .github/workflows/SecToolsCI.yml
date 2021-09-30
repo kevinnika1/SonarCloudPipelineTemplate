@@ -23,15 +23,17 @@ jobs:
       - name: Run Checkov action client
         uses: bridgecrewio/checkov-action@master
         with:
-          soft_fail: true
-          output_format: cli
-      
-     # - name: Run Checkov action github
-     #   uses: bridgecrewio/checkov-action@master
-     #   with:
-     #     soft_fail: true
-     #     output_format: github_failed_only
-      
+          soft_fail: true # optional: do not return an error code if there are failed checks
+          output_format: cli #this output allows for integration with github checks but can be changed to JSON or github_failed_only for different output formats
+          #directory: example/
+          #check: CKV_AWS_1 # optional: run only a specific check_id. can be comma separated list
+          #skip_check: CKV_AWS_2 # optional: skip a specific check_id. can be comma separated list
+          #quiet: true # optional: display only failed checks
+          #framework: terraform # optional: run only on a specific infrastructure {cloudformation,terraform,kubernetes,all}
+          #download_external_modules: true # optional: download external terraform modules from public git repositories and terraform registry
+          #log_level: DEBUG # optional: set log level. Default WARNING
+          #config_file: path/this_file
+          #baseline: cloudformation/.checkov.baseline # optional: Path to a generated baseline file. Will only report results not in the baseline.
 
    SAST:
     runs-on: ubuntu-latest
@@ -46,18 +48,23 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} #api token from sonarcloud
       with:
         args: >
-          -Dsonar.organization= enterorgname-here
+          -Dsonar.organization= enterorgname-here 
           -Dsonar.projectKey=enter-project-key-here
           -Dsonar.verbose=true
+        #  -Dsonar.python.coverage.reportPaths=coverage.xml #if you have unit tests can place the path of the xml here, can do more than python and you can find that in the sonarcloud documentaion. 
+        #  -Dsonar.sources=lib/ 
+        #  -Dsonar.test.exclusions=tests/** 
+        #  -Dsonar.tests=tests/
       
-   # - name: SonarQube Quality Gate check
+      #this job would check if the lastest scan in sonarcloud has passed its quality gate could be useful when working on master branch to stop the pipeline if there is a sonar cloud error.
+   # - name: SonarQube Quality Gate check 
    #   uses: sonarsource/sonarqube-quality-gate-action@master
    #   # Force to fail step after specific time
    #   timeout-minutes: 5
    #   env:
    #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
    
-
+#this checks the issues identified in sonarcloud from your scans and outputs it onto the github checks/annotaions for easier viewing when SAST scan is done.
    SASTCheck:
     runs-on: ubuntu-latest
     needs: [SAST]
@@ -65,8 +72,8 @@ jobs:
       - name: test
         uses: kevinnika1/Sonarcloud-GithubChecks-action@v2
         with:
-          org: 'enterorg'
-          project-key: 'enterprojectkey'
+          org: 'enterorg' #enter your sonarcloud org here
+          project-key: 'enterprojectkey' #enter your project key from sonarcloud here
           repo_token: ${{ secrets.GITHUB_TOKEN }} # no need to add this secret as its an environment variable
 
    ContainerVM:
@@ -77,8 +84,9 @@ jobs:
         uses: actions/checkout@master
 
       - name: Build an image from Dockerfile
+       #build image and give it a tag
         run: |
-          docker build . --tag template-container:${{ github.sha }} #build image and give it a tag
+          docker build . --tag template-container:${{ github.sha }}
            
       - name: trivy scan with GitHub checks
         uses: kevinnika1/Trivy-GitHubChecks-Action@v0.2
